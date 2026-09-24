@@ -1,0 +1,134 @@
+import {
+  randomBase64url,
+  sha256Base64url,
+} from "../../_shared/crypto.js";
+
+import {
+  getProvider,
+} from "../../_shared/providers.js";
+
+import {
+  setCookie,
+} from "../../_shared/cookies.js";
+
+export async function onRequestGet(context) {
+  const providerName = context.params.provider;
+  const provider = getProvider(providerName);
+
+  if (!provider) {
+    return new Response("Not Found", { status: 404 });
+  }
+
+  const baseUrl = context.env.PUBLIC_BASE_URL;
+
+  if (!baseUrl) {
+    return new Response("Server configuration error", { status: 500 });
+  }
+
+  const clientId =
+    providerName === "google"
+      ? context.env.GOOGLE_CLIENT_ID
+      : context.env.GITHUB_CLIENT_ID;
+
+  if (!clientId) {
+    return new Response("Server configuration error", { status: 500 });
+  }
+
+  const transactionId = randomBase64url();
+  const state = randomBase64url();
+  const codeVerifier = randomBase64url();
+
+  const nonce =
+    providerName === "google"
+      ? randomBase64url()
+      : null;
+
+  const expiresAt =
+    Math.floor(Date.now() / 1000) + 600;
+
+  const idHash = await sha256Base64url(transactionId);
+  const stateHash = await sha256Base64url(state);
+  const codeChallenge = await sha256Base64url(codeVerifier);
+
+  await context.env.DB.prepare(
+    `INSERT INTO oauth_transactions
+      (id_hash, provider, state_hash, nonce, code_verifier, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      idHash,
+      providerName,
+      stateHash,
+      nonce,
+      codeVerifier,
+      expiresAt
+    )
+    .run();
+
+  const redirectUri =
+    `${baseUrl}/oauth/callback/${providerName}`;
+
+  const authorizationUrl =
+    new URL(provider.authorizationEndpoint);
+
+  authorizationUrl.searchParams.set(
+    "client_id",
+    clientId
+  );
+
+  authorizationUrl.searchParams.set(
+    "redirect_uri",
+    redirectUri
+  );
+
+  authorizationUrl.searchParams.set(
+    "response_type",
+    "code"
+  );
+
+  authorizationUrl.searchParams.set(
+    "state",
+    state
+  );
+
+  authorizationUrl.searchParams.set(
+    "code_challenge",
+    codeChallenge
+  );
+
+  authorizationUrl.searchParams.set(
+    "code_challenge_method",
+    "S256"
+  );
+
+  if (providerName === "google") {
+    authorizationUrl.searchParams.set(
+      "scope",
+      "openid email profile"
+    );
+
+    authorizationUrl.searchParams.set(
+      "nonce",
+      nonce
+    );
+  }
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      "Location": authorizationUrl.toString(),
+      "Set-Cookie": setCookie(
+        "__Host-oauth-tx",
+        transactionId,
+        {
+          path: "/",
+          httpOnly: true,
+          secure: true,
+          sameSite: "Lax",
+          maxAge: 600,
+        }
+      ),
+      "Cache-Control": "no-store",
+    },
+  });
+}
