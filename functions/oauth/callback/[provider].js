@@ -67,14 +67,17 @@ export async function onRequestGet(context) {
     .first();
 
   if (!transaction) {
-    return errorResponse("Invalid or expired OAuth transaction");
+    return errorResponse(
+      "Invalid or expired OAuth transaction"
+    );
   }
 
   if (transaction.provider !== providerName) {
     return errorResponse("Invalid OAuth provider");
   }
 
-  const stateHash = await sha256Base64url(state);
+  const stateHash =
+    await sha256Base64url(state);
 
   if (stateHash !== transaction.state_hash) {
     return errorResponse("Invalid state");
@@ -87,7 +90,8 @@ export async function onRequestGet(context) {
     .bind(transaction.id_hash)
     .run();
 
-  const baseUrl = context.env.PUBLIC_BASE_URL;
+  const baseUrl =
+    context.env.PUBLIC_BASE_URL;
 
   if (!baseUrl) {
     return errorResponse(
@@ -118,6 +122,9 @@ export async function onRequestGet(context) {
 
   let identity;
 
+  /*
+   * GOOGLE
+   */
   if (providerName === "google") {
     const tokenResponse = await fetch(
       provider.tokenEndpoint,
@@ -132,8 +139,10 @@ export async function onRequestGet(context) {
           client_id: clientId,
           client_secret: clientSecret,
           redirect_uri: redirectUri,
-          grant_type: "authorization_code",
-          code_verifier: transaction.code_verifier,
+          grant_type:
+            "authorization_code",
+          code_verifier:
+            transaction.code_verifier,
         }),
       }
     );
@@ -144,7 +153,8 @@ export async function onRequestGet(context) {
       );
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokenData =
+      await tokenResponse.json();
 
     if (!tokenData.id_token) {
       return errorResponse(
@@ -152,12 +162,18 @@ export async function onRequestGet(context) {
       );
     }
 
-    identity = await verifyGoogleIdToken(
-      tokenData.id_token,
-      clientId,
-      transaction.nonce
-    );
-  } else {
+    identity =
+      await verifyGoogleIdToken(
+        tokenData.id_token,
+        clientId,
+        transaction.nonce
+      );
+  }
+
+  /*
+   * GITHUB
+   */
+  else {
     const tokenResponse = await fetch(
       provider.tokenEndpoint,
       {
@@ -173,7 +189,8 @@ export async function onRequestGet(context) {
           client_id: clientId,
           client_secret: clientSecret,
           redirect_uri: redirectUri,
-          code_verifier: transaction.code_verifier,
+          code_verifier:
+            transaction.code_verifier,
         }),
       }
     );
@@ -184,12 +201,14 @@ export async function onRequestGet(context) {
       );
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokenData =
+      await tokenResponse.json();
 
     if (
       !tokenData.access_token ||
-      String(tokenData.token_type).toLowerCase() !==
-        "bearer"
+      String(
+        tokenData.token_type
+      ).toLowerCase() !== "bearer"
     ) {
       return errorResponse(
         "Invalid GitHub token response"
@@ -210,23 +229,20 @@ export async function onRequestGet(context) {
       }
     );
 
+    /*
+     * DIAGNÓSTICO DO ERRO GITHUB
+     */
     if (!userResponse.ok) {
-      const remaining =
-        userResponse.headers.get(
-          "x-ratelimit-remaining"
-        );
-
-      const retryAfter =
-        userResponse.headers.get(
-          "retry-after"
-        );
+      const responseText =
+        await userResponse.text();
 
       return errorResponse(
-        `GitHub profile request failed: ${userResponse.status} | remaining=${remaining} | retry-after=${retryAfter}`
+        `GitHub profile request failed: ${userResponse.status} | ${responseText}`
       );
     }
 
-    const user = await userResponse.json();
+    const user =
+      await userResponse.json();
 
     if (!Number.isInteger(user.id)) {
       return errorResponse(
@@ -237,37 +253,42 @@ export async function onRequestGet(context) {
     identity = {
       issuer: "https://github.com",
       subject: String(user.id),
-      email: user.email ?? null,
+      email:
+        user.email ?? null,
       displayName:
         user.name ??
         user.login ??
         null,
     };
 
-    const revokeResponse = await fetch(
-      `https://api.github.com/applications/${encodeURIComponent(
-        clientId
-      )}/grant`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization:
-            `Basic ${btoa(
-              `${clientId}:${clientSecret}`
-            )}`,
-          Accept:
-            "application/vnd.github+json",
-          "Content-Type":
-            "application/json",
-          "X-GitHub-Api-Version":
-            "2026-03-10",
-        },
-        body: JSON.stringify({
-          access_token:
-            tokenData.access_token,
-        }),
-      }
-    );
+    /*
+     * REVOGAR TOKEN DO GITHUB
+     */
+    const revokeResponse =
+      await fetch(
+        `https://api.github.com/applications/${encodeURIComponent(
+          clientId
+        )}/grant`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization:
+              `Basic ${btoa(
+                `${clientId}:${clientSecret}`
+              )}`,
+            Accept:
+              "application/vnd.github+json",
+            "Content-Type":
+              "application/json",
+            "X-GitHub-Api-Version":
+              "2026-03-10",
+          },
+          body: JSON.stringify({
+            access_token:
+              tokenData.access_token,
+          }),
+        }
+      );
 
     if (revokeResponse.status !== 204) {
       return errorResponse(
@@ -276,10 +297,16 @@ export async function onRequestGet(context) {
     }
   }
 
-  const sessionId = randomBase64url();
+  /*
+   * CRIAR SESSÃO
+   */
+  const sessionId =
+    randomBase64url();
 
   const sessionIdHash =
-    await sha256Base64url(sessionId);
+    await sha256Base64url(
+      sessionId
+    );
 
   const sessionExpiresAt =
     now + 8 * 60 * 60;
@@ -300,9 +327,16 @@ export async function onRequestGet(context) {
     )
     .run();
 
-  const headers = new Headers();
+  /*
+   * COOKIES
+   */
+  const headers =
+    new Headers();
 
-  headers.set("Location", baseUrl);
+  headers.set(
+    "Location",
+    baseUrl
+  );
 
   headers.append(
     "Set-Cookie",
@@ -339,8 +373,11 @@ export async function onRequestGet(context) {
     "no-store"
   );
 
-  return new Response(null, {
-    status: 302,
-    headers,
-  });
+  return new Response(
+    null,
+    {
+      status: 302,
+      headers,
+    }
+  );
 }
