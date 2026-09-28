@@ -212,7 +212,7 @@ export async function onRequestGet(context) {
 
     if (!userResponse.ok) {
       return errorResponse(
-        "GitHub profile request failed"
+        `GitHub profile request failed: ${userResponse.status}`
       );
     }
 
