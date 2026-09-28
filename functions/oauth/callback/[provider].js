@@ -218,9 +218,7 @@ export async function onRequestGet(context) {
 
     const user = await userResponse.json();
 
-    if (
-      !Number.isInteger(user.id)
-    ) {
+    if (!Number.isInteger(user.id)) {
       return errorResponse(
         "Invalid GitHub profile"
       );
@@ -269,6 +267,7 @@ export async function onRequestGet(context) {
   }
 
   const sessionId = randomBase64url();
+
   const sessionIdHash =
     await sha256Base64url(sessionId);
 
@@ -291,36 +290,48 @@ export async function onRequestGet(context) {
     )
     .run();
 
+  const headers = new Headers();
+
+  headers.set("Location", baseUrl);
+
+  headers.append(
+    "Set-Cookie",
+    setCookie(
+      "__Host-oauth-tx",
+      "",
+      {
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "Lax",
+        maxAge: 0,
+      }
+    )
+  );
+
+  headers.append(
+    "Set-Cookie",
+    setCookie(
+      "__Host-session",
+      sessionId,
+      {
+        path: "/",
+        httpOnly: true,
+        secure: true,
+        sameSite: "Strict",
+        maxAge: 28800,
+      }
+    )
+  );
+
+  headers.set(
+    "Cache-Control",
+    "no-store"
+  );
+
   const response = new Response(null, {
     status: 302,
-    headers: {
-      Location: baseUrl,
-      "Set-Cookie":
-        setCookie(
-          "__Host-oauth-tx",
-          "",
-          {
-            path: "/",
-            httpOnly: true,
-            secure: true,
-            sameSite: "Lax",
-            maxAge: 0,
-          }
-        ) +
-        ", " +
-        setCookie(
-          "__Host-session",
-          sessionId,
-          {
-            path: "/",
-            httpOnly: true,
-            secure: true,
-            sameSite: "Strict",
-            maxAge: 28800,
-          }
-        ),
-      "Cache-Control": "no-store",
-    },
+    headers,
   });
 
   return response;
