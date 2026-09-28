@@ -122,9 +122,10 @@ export async function onRequestGet(context) {
 
   let identity;
 
-  /*
-   * GOOGLE
-   */
+  // =========================
+  // GOOGLE
+  // =========================
+
   if (providerName === "google") {
     const tokenResponse = await fetch(
       provider.tokenEndpoint,
@@ -170,9 +171,10 @@ export async function onRequestGet(context) {
       );
   }
 
-  /*
-   * GITHUB
-   */
+  // =========================
+  // GITHUB
+  // =========================
+
   else {
     const tokenResponse = await fetch(
       provider.tokenEndpoint,
@@ -215,23 +217,26 @@ export async function onRequestGet(context) {
       );
     }
 
+    // Buscar perfil do GitHub
     const userResponse = await fetch(
       "https://api.github.com/user",
       {
         headers: {
           Authorization:
             `Bearer ${tokenData.access_token}`,
+
           Accept:
             "application/vnd.github+json",
+
           "X-GitHub-Api-Version":
             "2026-03-10",
+
+          "User-Agent":
+            "oauth-pages-lab",
         },
       }
     );
 
-    /*
-     * DIAGNÓSTICO DO ERRO GITHUB
-     */
     if (!userResponse.ok) {
       const responseText =
         await userResponse.text();
@@ -252,18 +257,20 @@ export async function onRequestGet(context) {
 
     identity = {
       issuer: "https://github.com",
-      subject: String(user.id),
+
+      subject:
+        String(user.id),
+
       email:
         user.email ?? null,
+
       displayName:
         user.name ??
         user.login ??
         null,
     };
 
-    /*
-     * REVOGAR TOKEN DO GITHUB
-     */
+    // Revogar token do GitHub
     const revokeResponse =
       await fetch(
         `https://api.github.com/applications/${encodeURIComponent(
@@ -271,18 +278,26 @@ export async function onRequestGet(context) {
         )}/grant`,
         {
           method: "DELETE",
+
           headers: {
             Authorization:
               `Basic ${btoa(
                 `${clientId}:${clientSecret}`
               )}`,
+
             Accept:
               "application/vnd.github+json",
+
             "Content-Type":
               "application/json",
+
             "X-GitHub-Api-Version":
               "2026-03-10",
+
+            "User-Agent":
+              "oauth-pages-lab",
           },
+
           body: JSON.stringify({
             access_token:
               tokenData.access_token,
@@ -297,9 +312,10 @@ export async function onRequestGet(context) {
     }
   }
 
-  /*
-   * CRIAR SESSÃO
-   */
+  // =========================
+  // CRIAR SESSÃO
+  // =========================
+
   const sessionId =
     randomBase64url();
 
@@ -327,9 +343,10 @@ export async function onRequestGet(context) {
     )
     .run();
 
-  /*
-   * COOKIES
-   */
+  // =========================
+  // COOKIES
+  // =========================
+
   const headers =
     new Headers();
 
