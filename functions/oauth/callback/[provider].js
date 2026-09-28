@@ -211,8 +211,18 @@ export async function onRequestGet(context) {
     );
 
     if (!userResponse.ok) {
+      const remaining =
+        userResponse.headers.get(
+          "x-ratelimit-remaining"
+        );
+
+      const retryAfter =
+        userResponse.headers.get(
+          "retry-after"
+        );
+
       return errorResponse(
-        `GitHub profile request failed: ${userResponse.status}`
+        `GitHub profile request failed: ${userResponse.status} | remaining=${remaining} | retry-after=${retryAfter}`
       );
     }
 
@@ -329,10 +339,8 @@ export async function onRequestGet(context) {
     "no-store"
   );
 
-  const response = new Response(null, {
+  return new Response(null, {
     status: 302,
     headers,
   });
-
-  return response;
 }
