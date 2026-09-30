@@ -1,0 +1,26 @@
+EVIDÊNCIA 02 — RETORNO DO GOOGLE
+
+Projeto: oauth-pages-lab
+
+Provedor: Google
+
+Callback configurado:
+https://oauth-pages-lab-bvt.pages.dev/oauth/callback/google
+
+Fluxo testado:
+
+1. Usuário inicia o login pelo Google.
+2. O Google autentica o usuário.
+3. O Google redireciona para o callback configurado.
+4. A aplicação valida o retorno OAuth.
+5. A transação OAuth é consumida.
+6. Uma sessão local é criada no D1.
+7. O usuário autenticado pode consultar /api/me.
+
+PKCE utilizado:
+S256
+
+Também são utilizados state e nonce para proteção do fluxo OAuth.
+
+Resultado:
+LOGIN COM GOOGLE FUNCIONANDO.
