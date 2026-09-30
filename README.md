@@ -1,126 +1,141 @@
 # OAuth Pages Lab
 
-Projeto acadêmico de autenticação OAuth 2.0 utilizando **Google** e **GitHub**, desenvolvido com **Cloudflare Pages Functions** e **Cloudflare D1**.
+Projeto acadêmico de autenticação OAuth desenvolvido com **Cloudflare Pages Functions**, **D1**, **Google OAuth** e **GitHub OAuth**.
 
-## 🌐 Projeto publicado
+## 🌐 Projeto
 
-**Cloudflare Pages:**
+**Site:**
 https://oauth-pages-lab-bvt.pages.dev
-
-**Repositório:**
-https://github.com/kaua-fuckner/oauth-pages-lab
 
 ## 🔐 Autenticação
 
-O projeto possui autenticação utilizando:
+O projeto possui autenticação através de:
 
-* Google OAuth 2.0
-* GitHub OAuth 2.0
-* PKCE com método S256
-* State para proteção contra CSRF
-* Nonce para validação do fluxo OAuth
-* Sessões armazenadas no Cloudflare D1
+* Google OAuth
+* GitHub OAuth
+* PKCE com S256
+* `state` para proteção contra CSRF
+* `nonce` para validação do fluxo OAuth
+* Sessões locais armazenadas no Cloudflare D1
 
 ## 🗄️ Banco de dados
 
 O projeto utiliza **Cloudflare D1** para armazenar:
 
-* Transações OAuth temporárias
-* Sessões autenticadas
+* Transações OAuth
+* Sessões dos usuários
+* Expiração das sessões
+* Dados básicos do usuário autenticado
 
-As transações OAuth possuem controle de expiração e não podem ser reutilizadas.
+O binding utilizado pela aplicação é:
 
-As sessões também possuem controle de expiração e podem ser revogadas durante o logout.
+```text
+DB
+```
 
-## 🍪 Segurança da sessão
+## 🍪 Sessões e segurança
 
-O cookie de sessão utiliza:
+As sessões são controladas através de cookie com as seguintes propriedades:
 
 * `HttpOnly`
 * `Secure`
 * `SameSite=Strict`
 
-Os tokens OAuth não são armazenados no navegador.
+O sistema também possui:
 
-## 🔗 Endpoints
+* Expiração de sessões
+* Revogação de sessões
+* Proteção contra reutilização de sessões revogadas
+* Validação de `Origin` no logout
+* Consumo das transações OAuth após utilização
+* Rejeição de `state` inválido
+* Rejeição de transações OAuth inexistentes ou reutilizadas
 
-### API de sessão
+## 👤 API
 
-`/api/me`
+A aplicação possui o endpoint:
 
-Retorna os dados do usuário autenticado.
+```text
+/api/me
+```
 
-Usuários não autenticados recebem resposta `401 Unauthorized`.
+Ele permite consultar os dados do usuário autenticado.
 
-### Logout
+Quando não existe uma sessão válida, a API retorna:
 
-O logout encerra a sessão e impede a reutilização do cookie de sessão revogado.
+```text
+401 Unauthorized
+```
 
-### Callbacks OAuth
+Também existe o fluxo de logout para encerrar a sessão do usuário.
 
-**Google:**
+## 🔗 Callbacks OAuth
 
-`/oauth/callback/google`
+### Google
 
-**GitHub:**
+```text
+https://oauth-pages-lab-bvt.pages.dev/oauth/callback/google
+```
 
-`/oauth/callback/github`
+### GitHub
 
-## 🧪 Testes de segurança realizados
+```text
+https://oauth-pages-lab-bvt.pages.dev/oauth/callback/github
+```
 
-Foram realizados testes para verificar o comportamento do sistema em situações de falha:
+## 🧪 Testes de segurança
 
-| Teste                           | Resultado |
-| ------------------------------- | --------- |
-| Ausência de transação OAuth     | PASSOU    |
-| State alterado                  | PASSOU    |
-| Reutilização da transação OAuth | PASSOU    |
-| Sessão expirada                 | PASSOU    |
-| Origin inválido no logout       | PASSOU    |
-| Reutilização de sessão revogada | PASSOU    |
+Foram realizados testes para verificar situações inválidas no fluxo de autenticação:
 
-### Resultados
+* Transação OAuth inexistente
+* `state` alterado
+* Reutilização de transação OAuth
+* Sessão expirada
+* `Origin` inválida no logout
+* Reutilização de sessão revogada
 
-* `Missing OAuth transaction`
-* `Invalid state`
-* `{"error":"unauthorized"}`
-* `403 Forbidden — Invalid Origin`
+Todos os testes apresentaram o comportamento esperado.
 
-## 📋 Checklist
+## 📂 Evidências
 
-* [x] Site publicado no Cloudflare Pages
-* [x] Projeto utilizando a branch `main`
-* [x] Cloudflare Pages Functions funcionando
-* [x] Banco D1 configurado
+Os arquivos utilizados para comprovar a configuração, funcionamento e testes do projeto estão organizados na pasta:
+
+👉 [**Ver evidências da Entrega 1**](https://github.com/kaua-fuckner/oauth-pages-lab/tree/main/public/entrega1)
+
+A pasta contém os registros de configuração do Pages, autenticação com Google e GitHub, esquema do D1, testes de falha e checklist de aceitação.
+
+## ✅ Checklist
+
+* [x] Cloudflare Pages publicado
+* [x] Branch `main` configurada
+* [x] Pages Functions funcionando
+* [x] Cloudflare D1 configurado
+* [x] Binding `DB` configurado
 * [x] Login com Google funcionando
 * [x] Login com GitHub funcionando
-* [x] Callbacks OAuth configurados
-* [x] PKCE utilizando S256
-* [x] Sessão local criada no D1
-* [x] Cookie de sessão seguro
-* [x] Endpoint `/api/me` funcionando
-* [x] Usuário não autenticado recebe `401`
-* [x] Logout funcionando
-* [x] Sessão removida após logout
-* [x] Transação OAuth não pode ser reutilizada
-* [x] State alterado é rejeitado
-* [x] Sessão expirada é rejeitada
-* [x] Origin inválido é rejeitado
-* [x] Sessão revogada não pode ser reutilizada
-* [x] Arquivos estáticos permanecem públicos
-* [x] Segredos não foram incluídos no código-fonte
-* [x] Tokens não são armazenados no navegador
-* [x] Não foram utilizados Node.js, npm, npx ou Wrangler
+* [x] PKCE S256
+* [x] `state`
+* [x] `nonce`
+* [x] Sessões armazenadas no D1
+* [x] Cookie `HttpOnly`
+* [x] Cookie `Secure`
+* [x] Cookie `SameSite=Strict`
+* [x] `/api/me`
+* [x] Logout
+* [x] Expiração de sessão
+* [x] Revogação de sessão
+* [x] Proteção contra reutilização de transações OAuth
+* [x] Proteção contra `state` inválido
+* [x] Validação de `Origin`
+* [x] Testes de falha realizados
 
-## 👨‍💻 Projeto acadêmico
-
-Projeto desenvolvido para avaliação acadêmica individual.
-
-Tecnologias principais:
+## 🛠️ Tecnologias
 
 * HTML
+* CSS
 * JavaScript
 * Cloudflare Pages
 * Cloudflare Pages Functions
 * Cloudflare D1
-* OAuth 2.0
+* Google OAuth
+* GitHub OAuth
