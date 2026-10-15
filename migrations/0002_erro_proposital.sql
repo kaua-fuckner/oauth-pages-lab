@@ -1,1 +1,1 @@
-   CREATE TABLE IF NOT EXISTS teste_ok (id INTEGER);git status
+   CREATE TABLE IF NOT EXISTS teste_ok (id INTEGER);
