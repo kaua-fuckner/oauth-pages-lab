@@ -1,0 +1,9 @@
+name = "oauth-pages-lab"
+pages_build_output_dir = "public"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "oauth-sessions"
+database_id = "f735eeb5-3ff4-46df-a4e7-e43debc7371e"
+migrations_dir = "migrations"
