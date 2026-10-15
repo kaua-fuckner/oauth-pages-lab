@@ -1,3 +1,1 @@
-CREATE TABL teste_erro (id INTEGER);git add migrations
-git commit -m "teste: migracao com erro para bloquear merge"
-git push -u origin teste-bloqueio
+   CREATE TABLE IF NOT EXISTS teste_ok (id INTEGER);git status
