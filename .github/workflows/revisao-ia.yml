@@ -29,4 +29,4 @@ jobs:
       - id: ia
         uses: actions/ai-inference@v3
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT
+           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
