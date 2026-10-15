@@ -1,0 +1,1 @@
+CREATE TABL teste_erro (id INTEGER);
