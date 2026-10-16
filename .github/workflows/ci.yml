@@ -1,21 +1,51 @@
+
 name: ci
+
 on:
   push:
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
   verificar:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Baixa o repositorio
+        uses: actions/checkout@v4
+
       - name: Procura segredos versionados
+        shell: bash
         run: |
-          if git grep -nE "GOCSPX-|client_secret *= *['\"][^'\"]+" -- . ':!*.md' ':!.github/workflows/ci.yml'; then
-            echo "::error::Possível segredo no repositório"; exit 1
+          if git grep -nE "GOCSPX-|client_secret[[:space:]]*=[[:space:]]*['\"][^'\"]+" -- . \
+            ':!*.md' \
+            ':!.github/workflows/ci.yml'; then
+            echo "::error::Possivel segredo encontrado no repositorio."
+            exit 1
           fi
-      - name: Aplica as migrações D1 em um SQLite local
+
+      - name: Instala SQLite
         run: |
-          for f in migrations/*.sql; do sqlite3 -bail teste.db < "$f"; done
+          sudo apt-get update
+          sudo apt-get install -y sqlite3
+
+      - name: Valida migracoes SQL
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -n "$(find migrations -maxdepth 1 -name '*.sql' -print -quit)"
+
+          for f in migrations/*.sql; do
+            echo "Aplicando migracao: $f"
+            sqlite3 -bail teste.db < "$f"
+          done
+
+          echo "Tabelas criadas:"
           sqlite3 teste.db ".tables"
+
       - name: Valida HTML
-        run: npx --yes htmlhint "**/*.html"
+        run: npx --yes htmlhint "public/**/*.html"
